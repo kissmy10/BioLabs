@@ -12,25 +12,30 @@ namespace lab2
             // матрица оценок
             var F = new int[A.Length, B.Length];
 
-            // линейный штраф
-            const int d = -5;
+            var G = new int[A.Length, B.Length];
+            var H = new int[A.Length, B.Length];
+            var V = new int[A.Length, B.Length];
+
+            // штрафы за открытие и продолжение gapa
+            const int d = 5;
+            const int e = 1;
 
             // Вычисляем матрицу F
             for (var i = 0; i < A.Length; i++)
-                F[i, 0] = d * i;
+                V[i, 0] = d + (i - 1) * e;
 
             for (var j = 0; j < B.Length; j++)
-                F[0, j] = d * j;
+                V[0, j] = d + (j - 1) * e;
 
             for (var i = 1; i < A.Length; i++)
                 for (var j = 1; j < B.Length; j++)
                 {
-                    var match = F[i - 1, j - 1] + S(A[i], B[j]);
-                    var delete = F[i - 1, j] + d;
-                    var insert = F[i, j - 1] + d;
-                    F[i, j] = Math.Max(Math.Max(match, insert), delete);
+                    F[i, j] = V[i - 1, j - 1] + S(A[i], B[j]);
+                    G[i, j] = Math.Max(V[i - 1, j] - d, G[i - 1, j] - e);
+                    H[i, j] = Math.Max(V[i, j - 1] - d, H[i, j - 1] - e);
+                    V[i, j] = Math.Max(F[i, j], Math.Max(G[i, j], H[i, j]));
                 }
-
+            
             var alignmentA = "";
             var alignmentB = "";
 
@@ -40,12 +45,9 @@ namespace lab2
             // Алгоритм Нидлмана — Вунша
             while (_i > 0 && _j > 0)
             {
-                var score = F[_i, _j];
-                var scoreDiag = F[_i - 1, _j - 1];
-                var scoreUp = F[_i, _j - 1];
-                var scoreLeft = F[_i - 1, _j];
+                var score = V[_i, _j];
 
-                if (score == scoreDiag + S(A[_i], B[_j]))
+                if (score == V[_i - 1, _j - 1] + S(A[_i], B[_j]))
                 {
                     alignmentA = A[_i] + alignmentA;
                     alignmentB = B[_j] + alignmentB;
@@ -53,19 +55,19 @@ namespace lab2
                     _j = _j - 1;
                     continue;
                 }
-                
-                if (score == scoreLeft + d)
+
+                if ((score == V[_i - 1, _j] - d) || (score == G[_i - 1, _j] - e))
                 {
                     alignmentA = A[_i] + alignmentA;
                     alignmentB = "-" + alignmentB;
                     _i = _i - 1;
                     continue;
-                } 
-                
-                if (score == scoreUp + d)
+                }
+
+                if ((score == V[_i, _j - 1] - d) || (score == H[_i, _j - 1] - e))
                 {
-                     alignmentA = "-" + alignmentA;
-                     alignmentB = B[_j] + alignmentB;
+                    alignmentA = "-" + alignmentA;
+                    alignmentB = B[_j] + alignmentB;
                      _j = _j - 1;
                 }
               }
@@ -80,11 +82,11 @@ namespace lab2
         {
             4, -1, -2, -2, 0, -1, -1, 0, -2, -1, -1, -1, -1, -2, -1, 1, 0, -3, -2, 0, -2, -1, 0, -4,
             -1, 5, 0, -2, -3, 1, 0, -2, 0, -3, -2, 2, -1, -3, -2, -1, -1, -3, -2, -3, -1, 0, -1, -4,
-            -2,  0,  6,  1, -3,  0,  0,  0,  1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1, -4, 
+            -2,  0,  6,  1, -3,  0,  0,  0, 1, -3, -3,  0, -2, -3, -2,  1,  0, -4, -2, -3,  3,  0, -1, -4, 
             -2, -2,  1,  6 -3,  0,  2 -1, -1, -3, -4, -1, -3, -3, -1,  0, -1, -4, -3, -3,  4,  1, -1, -4, 
             0, -3, -3, -3,  9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1, -3, -3, -2, -4, 
             -1,  1,  0,  0, -3,  5,  2 -2,  0, -3, -2,  1,  0, -3, -1,  0, -1, -2, -1, -2,  0,  3, -1, -4, 
-            -1,  0,  0,  2, -4,  2,  5, -2,  0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4 -1, -4, 
+            -1,  0,  0,  2, -4,  2,  5, -2, 0, -3, -3,  1, -2, -3, -1,  0, -1, -3, -2, -2,  1,  4 -1, -4, 
             0, -2,  0, -1, -3, -2, -2,   6, -2, -4, -4, -2, -3, -3, -2,  0, -2, -2, -3, -3, -1, -2, -1, -4, 
             -2,  0,  1, -1, -3,  0,  0, -2,  8, -3, -3, -1, -2, -1, -2, -1, -2, -2,  2 -3,  0,  0, -1, -4, 
             -1, -3, -3, -3, -1, -3, -3, -4, -3,  4,  2, -3,  1,  0, -3, -2, -1, -3, -1,  3, -3, -3, -1, -4, 
